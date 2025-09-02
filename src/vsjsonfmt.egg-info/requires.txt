@@ -1,4 +1,0 @@
-
-[gui]
-customtkinter>=5.2.2
-pyperclip>=1.8.2
