@@ -1,0 +1,3 @@
+[console_scripts]
+vsjsonfmt = vsjsonfmt.cli:main
+vsjsonfmt-gui = vsjsonfmt.gui:main

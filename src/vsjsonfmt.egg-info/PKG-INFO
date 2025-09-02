@@ -1,0 +1,66 @@
+Metadata-Version: 2.4
+Name: vsjsonfmt
+Version: 0.1.0
+Summary: Vintage Story JSON formatter (1.21-focused), Prettier-like
+Author: Pure Winter
+License: MIT
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Provides-Extra: gui
+Requires-Dist: customtkinter>=5.2.2; extra == "gui"
+Requires-Dist: pyperclip>=1.8.2; extra == "gui"
+
+
+# vsjsonfmt — Vintage Story JSON Formatter (1.21)
+
+A Prettier-style formatter for Vintage Story JSON (supports JSONC input), with schema-aware key ordering
+for common assets (`blocktypes`, `itemtypes`, `entitytypes`, `shapes`, `lang`, `jsonpatch`).
+
+## Install (PyCharm or terminal)
+```bash
+python -m venv .venv
+# Windows:
+. .venv/Scripts/activate
+# macOS/Linux:
+# source .venv/bin/activate
+
+pip install -e .
+```
+
+## Use
+```bash
+# Format files in place
+vsjsonfmt assets/**/*.json -w
+
+# Check mode (exit 1 if changes needed)
+vsjsonfmt --check assets/**/*.json
+
+# Show diffs
+vsjsonfmt assets/**/*.json --diff
+
+# stdin → stdout
+type my.json | vsjsonfmt --stdin
+```
+
+## Config
+Create `vsjsonfmt.config.json` at your project root:
+```json
+{
+  "indent": 2,
+  "inline_short_arrays": true,
+  "max_inline_array_length": 60,
+  "sort_lang_alpha": true
+}
+```
+
+## Notes
+- Accepts `//` and `/* ... */` comments on input (they are stripped in output).
+- Trailing commas are tolerated on input (removed in output).
+- Lang files are sorted alphabetically by key (configurable).
+- Patch arrays are sorted by `file`, then `op`, then `path` for stability.
+- Shapes: elements and common nested keys get sensible ordering.
+
+MIT License.

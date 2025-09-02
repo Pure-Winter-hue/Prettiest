@@ -1,0 +1,8 @@
+{
+  "indent": 2,
+  "print_width": 120,
+  "array_wrap": "collapse",
+  "object_wrap": "collapse",
+  "aggressive_inline": true,
+  "long_block_threshold": 20
+}
