@@ -1,6 +1,3 @@
-# Prettiest
-Prettiest Vintage Story Json Formatter
-
 # Prettiest — Vintage Story JSON Formatter
 
 <p align="center">
