@@ -74,13 +74,14 @@ This PyInstaller build is fully portable — **no Python required**.
 If you cloned this repo and want to run from source:
 
 ```bash
-pip install customtkinter pyperclip pillow
-# optional (Windows fast clipboard)
+python -m venv .venv
+source .venv/bin/activate
+pip python -m pip install -r requirements.txt
+
+# optional (Windows only fast clipboard)
 pip install pywin32
 
-python -m src.vsjsonfmt.gui
-# or
-python src/vsjsonfmt/gui.py
+python -m vsjsonfmt.gui
 ```
 
 ---
