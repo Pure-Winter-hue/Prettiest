@@ -6,7 +6,8 @@ from typing import Any, Dict, List, Tuple, Optional
 
 # ------------------------------ Utilities ------------------------------
 def _read_text(path: Path) -> str:
-    return path.read_text(encoding="utf-8")
+    # Support UTF-8 BOM (common in Windows editors). Using utf-8-sig removes it.
+    return path.read_text(encoding="utf-8-sig")
 
 def _write_text(path: Path, data: str) -> None:
     # Normalize to LF
@@ -16,7 +17,9 @@ def _write_text(path: Path, data: str) -> None:
     path.write_text(data, encoding="utf-8")
 
 # ------------------------------ JSONC support ------------------------------
-_STRING_RE = re.compile(r'"(?:\\.|[^"\\])*"')
+# Match both double-quoted and single-quoted strings so comment markers inside
+# strings are not treated as comments.
+_STRING_RE = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'')
 _SLASH_SLASH_COMMENT_RE = re.compile(r"//.*?(?=\n|$)")
 _SLASH_STAR_COMMENT_RE = re.compile(r"/\*.*?\*/", re.S)
 
@@ -38,17 +41,19 @@ def _strip_comments(jsonc: str) -> str:
 
 def _strip_trailing_commas(s: str) -> str:
     out: List[str] = []
-    i = 0; in_string = False; escape = False
+    i = 0
+    quote: Optional[str] = None  # '"' or "'"
+    escape = False
     while i < len(s):
         ch = s[i]
-        if in_string:
+        if quote is not None:
             out.append(ch)
             if escape: escape = False
             elif ch == "\\": escape = True
-            elif ch == '"': in_string = False
+            elif ch == quote: quote = None
             i += 1; continue
-        if ch == '"':
-            in_string = True; escape = False; out.append(ch); i += 1; continue
+        if ch in ('"', "'"):
+            quote = ch; escape = False; out.append(ch); i += 1; continue
         if ch in "}]":
             j = len(out) - 1
             while j >= 0 and out[j].isspace(): j -= 1
@@ -57,10 +62,110 @@ def _strip_trailing_commas(s: str) -> str:
         out.append(ch); i += 1
     return "".join(out)
 
+def _convert_single_quoted_strings(s: str) -> str:
+    """Convert JSON5-ish single-quoted strings to standard JSON double-quoted strings.
+
+    This is *line-preserving* for normal inputs (we do not rewrite newlines), which keeps
+    error reporting aligned in the GUI.
+
+    Rules:
+    - Only transforms when we're not inside a comment or a double-quoted string.
+    - Escapes embedded double-quotes inside a single-quoted string.
+    - Leaves comments untouched.
+    """
+    out: List[str] = []
+    i = 0; n = len(s)
+    quote: Optional[str] = None  # current string delimiter ('"' or "'")
+    escape = False
+    in_line = False
+    in_block = False
+
+    while i < n:
+        ch = s[i]
+
+        # comments
+        if in_line:
+            out.append(ch)
+            if ch == "\n":
+                in_line = False
+            i += 1
+            continue
+        if in_block:
+            out.append(ch)
+            if ch == "*" and i + 1 < n and s[i + 1] == "/":
+                out.append("/")
+                i += 2
+                in_block = False
+                continue
+            i += 1
+            continue
+
+        # inside string
+        if quote is not None:
+            # When converting a single-quoted string, also convert its closing delimiter.
+            if quote == "'" and not escape and ch == "'":
+                out.append('"')
+                quote = None
+                i += 1
+                continue
+
+            # Escape embedded double quotes inside a single-quoted string.
+            if quote == "'" and not escape and ch == '"':
+                out.append("\\\"")
+                i += 1
+                continue
+
+            out.append(ch)
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == quote:
+                quote = None
+            i += 1
+            continue
+
+        # start comment?
+        if ch == "/" and i + 1 < n:
+            nxt = s[i + 1]
+            if nxt == "/":
+                out.append("//")
+                i += 2
+                in_line = True
+                continue
+            if nxt == "*":
+                out.append("/*")
+                i += 2
+                in_block = True
+                continue
+
+        # start string?
+        if ch == '"':
+            quote = '"'
+            out.append(ch)
+            i += 1
+            continue
+        if ch == "'":
+            quote = "'"
+            out.append('"')
+            i += 1
+            continue
+
+        out.append(ch)
+        i += 1
+
+    # If we ended inside a single-quoted string, the user input is malformed anyway.
+    # We still return what we have.
+    return "".join(out)
+
 def parse_json_lenient(text: str) -> Any:
+    # Some files start with a UTF-8 BOM (U+FEFF). Strip it so json.loads won't fail.
+    if text.startswith("\ufeff"):
+        text = text.lstrip("\ufeff")
     no_comments = _strip_comments(text)
     no_trailing = _strip_trailing_commas(no_comments)
-    return json.loads(no_trailing)  # key order preserved (3.7+)
+    no_single = _convert_single_quoted_strings(no_trailing)
+    return json.loads(no_single)  # key order preserved (3.7+)
 
 # ------------------------------ Formatting ------------------------------
 @dataclass
@@ -261,7 +366,7 @@ def _load_project_config(start_dir: Path) -> Dict[str, Any]:
         p = cur / "vsjsonfmt.config.json"
         if p.exists():
             try:
-                return json.loads(p.read_text(encoding="utf-8"))
+                return json.loads(p.read_text(encoding="utf-8-sig"))
             except Exception:
                 return {}
         if cur == root:

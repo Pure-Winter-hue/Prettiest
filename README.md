@@ -12,7 +12,7 @@
 
 A fast, desktop GUI for formatting and validating **Vintage Story JSON** (Newtonsoft relaxed JSON; often called *“JSON with comments”*). It preserves comments, highlights important VS keys, detects common mistakes (with optional auto-fix), and stays smooth on large files with visible-range highlighting.
 
-> **Why?** Vintage Story uses Newtonsoft’s relaxed JSON parser, which supports things normal JSON does not: comments (`//`, `/* */`), trailing commas, unquoted keys, and multiple top-level values. Prettiest understands these quirks so you can edit VS assets comfortably.
+> **Why?** Vintage Story uses Newtonsoft’s relaxed JSON parser, which supports things normal JSON does not: comments (`//`, `/* */`), trailing commas, unquoted keys, **single-quoted strings**, and multiple top-level values. Prettiest understands these quirks so you can edit VS assets comfortably.
 
 > **Note on terminology:** Some communities call this **JSONC (JSON with Comments)**. In this README, *Vintage Story JSON* and *JSON with comments* both refer to this relaxed Newtonsoft format — not the official JSONC spec.
 
